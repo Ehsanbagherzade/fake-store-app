@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useRef } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import {DefaultApi, ProductsGet200ResponseInner} from "@/api-client";
+import config from "../../../configuration";
 
-interface Product {
-    id: number;
-    title: string;
-    price: number;
-    image?: string;
+
+interface Product extends ProductsGet200ResponseInner {
     rating?: {
         rate: number;
         count: number;
@@ -21,25 +19,31 @@ export default function Home() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const mountedRef = useRef(true);
 
     useEffect(() => {
-        const fetchProducts = async () => {
+        mountedRef.current = true;
+        const api = new DefaultApi(config);
+
+        (async () => {
             try {
-                const response = await axios.get('https://fakestoreapi.com/products');
-                setProducts(response.data);
+                const response = await api.productsGet();
+                if (!mountedRef.current) return;
+                setProducts(response.data as Product[]);
             } catch (err) {
+                if (!mountedRef.current) return;
                 setError('خطا در دریافت محصولات');
                 console.error('Error:', err);
             } finally {
-                setLoading(false);
+                if (mountedRef.current) {
+                    setLoading(false);
+                }
             }
+        })();
+
+        return () => {
+            mountedRef.current = false;
         };
-
-        const timer = setTimeout(() => {
-            fetchProducts();
-        }, 5000);
-
-        return () => clearTimeout(timer);
     }, []);
 
     if (error) return (
@@ -49,7 +53,7 @@ export default function Home() {
     );
 
     return (
-        <main className="container py-5">
+        <main className="container py-5" dir="rtl">
             <h1 className="text-center mb-5 fw-bold text-primary">محصولات فروشگاه</h1>
 
             <div className="row g-4">
@@ -71,12 +75,12 @@ export default function Home() {
                     products.map((product) => (
                         <div key={product.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
                             <div className="card h-100 shadow-sm hover-shadow">
-                                <div className="card-img-top bg-light d-flex align-items-center justify-content-center" style={{height: '200px'}}>
+                                <div className="card-img-top bg-light d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
                                     <img
                                         src={product.image || '/placeholder-product.jpg'}
                                         alt={product.title}
                                         className="img-fluid p-3"
-                                        style={{maxHeight: '100%', maxWidth: '100%'}}
+                                        style={{ maxHeight: '100%', maxWidth: '100%' }}
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src = '/placeholder-product.jpg';
                                         }}
@@ -86,6 +90,7 @@ export default function Home() {
                                 <div className="card-body d-flex flex-column">
                                     <h5 className="card-title">{product.title}</h5>
 
+                                    {/* ⭐ بخش امتیاز */}
                                     <div className="mb-3">
                                         <div className="text-warning">
                                             {[...Array(5)].map((_, i) => (

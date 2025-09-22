@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  frontend:
+    image: node:18-alpine
+    container_name: react_frontend
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    command: sh -c "npm install --silent && npm run dev"
+    depends_on:
+      - backend
+
+  backend:
+    image: clue/json-server
+    container_name: fake_api
+    volumes:
+      - ./db.json:/data/db.json:ro
+    ports:
+      - "4000:80"
+
+#اینم کانتینر اش برای امیر اقای گل
+  openapi-generator:
+    image: openapitools/openapi-generator-cli
+    container_name: openapi_gen
+    volumes:
+      - ./openapi:/local
+    command: generate -i /local/openapi.yaml -g typescript-axios -o /local/generated
